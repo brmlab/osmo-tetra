@@ -70,8 +70,6 @@ class top_block(grc_wxgui.top_block_gui):
     else:
         first_decim = 10
 
-    self.offset = 0
-
     taps = firdes.low_pass(1.0, sample_rate, options.low_pass, options.low_pass * 0.2, firdes.WIN_HANN)
     self.tuner = filter.freq_xlating_fir_filter_ccf(first_decim, taps, self.offset, sample_rate)
 
