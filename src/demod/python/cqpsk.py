@@ -94,7 +94,7 @@ class cqpsk_mod(gr.hier_block2):
             raise TypeError, ("sbp must be an integer >= 2, is %d" % samples_per_symbol)
 
 	ntaps = 11 * samples_per_symbol
- 
+
         arity = 8
 
         # turn bytes into k-bit vectors
@@ -122,10 +122,10 @@ class cqpsk_mod(gr.hier_block2):
 
         if verbose:
             self._print_verbage()
-        
+
         if log:
             self._setup_logging()
-            
+
 	# Connect & Initialize base class
         self.connect(self, self.bytes2chunks, self.symbol_mapper, self.diffenc,
                      self.chunks2symbols, self.rrc_filter, self)
@@ -150,7 +150,7 @@ class cqpsk_mod(gr.hier_block2):
         self.connect(self.symbol_mapper,
                      blocks.file_sink(gr.sizeof_char, "tx_graycoder.dat"))
         self.connect(self.diffenc,
-                     blocks.file_sink(gr.sizeof_char, "tx_diffenc.dat"))        
+                     blocks.file_sink(gr.sizeof_char, "tx_diffenc.dat"))
         self.connect(self.chunks2symbols,
                      blocks.file_sink(gr.sizeof_gr_complex, "tx_chunks2symbols.dat"))
         self.connect(self.rrc_filter,
@@ -184,7 +184,7 @@ class cqpsk_mod(gr.hier_block2):
 
 class cqpsk_demod(gr.hier_block2):
 
-    def __init__(self, 
+    def __init__(self,
                  samples_per_symbol=_def_samples_per_symbol,
                  excess_bw=_def_excess_bw,
                  costas_alpha=_def_costas_alpha,
@@ -236,13 +236,13 @@ class cqpsk_demod(gr.hier_block2):
             raise TypeError, "sbp must be >= 2, is %d" % samples_per_symbol
 
         arity = pow(2,self.bits_per_symbol())
- 
+
         # Automatic gain control
         scale = (1.0/16384.0)
         self.pre_scaler = blocks.multiply_const_cc(scale)   # scale the signal from full-range to +-1
         #self.agc = gr.agc2_cc(0.6e-1, 1e-3, 1, 1, 100)
         self.agc = analog.feedforward_agc_cc(16, 2.0)
-       
+
         # RRC data filter
         ntaps = 11 * samples_per_symbol
         self.rrc_taps = firdes.root_raised_cosine(
@@ -251,7 +251,7 @@ class cqpsk_demod(gr.hier_block2):
             1.0,                      # symbol rate
             self._excess_bw,          # excess bandwidth (roll-off factor)
             ntaps)
-        self.rrc_filter=filter.interp_fir_filter_ccf(1, self.rrc_taps)        
+        self.rrc_filter=filter.interp_fir_filter_ccf(1, self.rrc_taps)
 
         if not self._mm_gain_mu:
             sbs_to_mm = {2: 0.050, 3: 0.075, 4: 0.11, 5: 0.125, 6: 0.15, 7: 0.15}
@@ -262,7 +262,7 @@ class cqpsk_demod(gr.hier_block2):
         self._costas_beta  = 0.25 * self._costas_alpha * self._costas_alpha
         fmin = -0.025
         fmax = 0.025
-        
+
 	if not _def_has_gr_digital:
             self.receiver=gr.mpsk_receiver_cc(arity, pi/4.0,
                                           self._costas_alpha, self._costas_beta,
@@ -292,10 +292,10 @@ class cqpsk_demod(gr.hier_block2):
 
         if verbose:
             self._print_verbage()
-        
+
         if log:
             self._setup_logging()
- 
+
         # Connect & Initialize base class
         self.connect(self, self.pre_scaler, self.agc, self.rrc_filter, self.receiver,
                      self.diffdec, self.to_float, self.rescale, self)
@@ -331,7 +331,7 @@ class cqpsk_demod(gr.hier_block2):
         self.connect(self.receiver,
                      blocks.file_sink(gr.sizeof_gr_complex, "rx_receiver.dat"))
         self.connect(self.diffdec,
-                     blocks.file_sink(gr.sizeof_gr_complex, "rx_diffdec.dat"))        
+                     blocks.file_sink(gr.sizeof_gr_complex, "rx_diffdec.dat"))
         self.connect(self.to_float,
                      blocks.file_sink(gr.sizeof_float, "rx_to_float.dat"))
         self.connect(self.rescale,

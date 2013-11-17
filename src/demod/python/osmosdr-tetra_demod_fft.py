@@ -25,10 +25,7 @@ from optparse import OptionParser
 import osmosdr
 import wx
 
-try:
-    import cqpsk
-except:
-    from tetra_demod import cqpsk
+import cqpsk
 
 # applies frequency translation, resampling and demodulation
 
@@ -45,15 +42,10 @@ class top_block(grc_wxgui.top_block_gui):
     self.src = osmosdr.source(options.args)
     self.src.set_center_freq(self.ifreq)
     self.src.set_sample_rate(int(options.sample_rate))
-
-    if self.rfgain is None:
-        self.src.set_gain_mode(1)
-        self.iagc = 1
-        self.rfgain = 0
-    else:
-        self.iagc = 0
-        self.src.set_gain_mode(0)
-        self.src.set_gain(self.rfgain)
+    self.src.set_freq_corr(0, 0)
+    self.src.set_dc_offset_mode(2, 0)
+    self.src.set_iq_balance_mode(2, 0)
+    self.src.set_gain_mode(1, 0)
 
     # may differ from the requested rate
     sample_rate = self.src.get_sample_rate()
@@ -118,53 +110,6 @@ class top_block(grc_wxgui.top_block_gui):
     )
     self.Add(self._ifreq_text_box)
 
-    def set_iagc(iagc):
-        self.iagc = iagc
-        self._agc_check_box.set_value(self.iagc)
-        self.src.set_gain_mode(self.iagc, 0)
-        self.src.set_gain(0 if self.iagc == 1 else self.rfgain, 0)
-
-    self._agc_check_box = forms.check_box(
-        parent=self.GetWin(),
-        value=self.iagc,
-        callback=set_iagc,
-        label="Automatic Gain",
-        true=1,
-        false=0,
-    )
-
-    self.Add(self._agc_check_box)
-
-    def set_rfgain(rfgain):
-        self.rfgain = rfgain
-        self._rfgain_slider.set_value(self.rfgain)
-        self._rfgain_text_box.set_value(self.rfgain)
-        self.src.set_gain(0 if self.iagc == 1 else self.rfgain, 0)
-
-    _rfgain_sizer = wx.BoxSizer(wx.VERTICAL)
-    self._rfgain_text_box = forms.text_box(
-        parent=self.GetWin(),
-        sizer=_rfgain_sizer,
-        value=self.rfgain,
-        callback=set_rfgain,
-        label="RF Gain",
-        converter=forms.float_converter(),
-        proportion=0,
-    )
-    self._rfgain_slider = forms.slider(
-        parent=self.GetWin(),
-        sizer=_rfgain_sizer,
-        value=self.rfgain,
-        callback=set_rfgain,
-        minimum=0,
-        maximum=50,
-        num_steps=200,
-        style=wx.SL_HORIZONTAL,
-        cast=float,
-        proportion=1,
-    )
-
-    self.Add(_rfgain_sizer)
 
     self.Add(self.Main)
 
