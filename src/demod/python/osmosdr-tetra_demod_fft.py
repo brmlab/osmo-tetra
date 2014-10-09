@@ -45,6 +45,7 @@ class top_block(grc_wxgui.top_block_gui):
     self.src = osmosdr.source(options.args)
     self.src.set_center_freq(self.ifreq)
     self.src.set_sample_rate(int(options.sample_rate))
+    self.src.set_freq_corr(36, 0)
 
     if self.rfgain is None:
         self.src.set_gain_mode(1)
@@ -160,7 +161,7 @@ class top_block(grc_wxgui.top_block_gui):
         callback=set_rfgain,
         minimum=0,
         maximum=50,
-        num_steps=200,
+        num_steps=1000,
         style=wx.SL_HORIZONTAL,
         cast=float,
         proportion=1,
