@@ -24,7 +24,6 @@ class top_block(gr.top_block):
         self.channel_width = channel_width = 25e3
         self.chans = chans = 36*2  # must be multiple of 36, bacause of resampling
         self.sample_rate = sample_rate = chans * channel_width
-        self.out_samp_rate = out_samp_rate = symbol_rate*samp_per_sym
         self.fnames = expanduser('~/tetra-tmp/fifo')
 
         #### LIST OF DEMODULATED CHANNELS
@@ -41,20 +40,16 @@ class top_block(gr.top_block):
         self.source = osmosdr.source()
         self.source.set_sample_rate(sample_rate)
         self.source.set_center_freq(424.000e6, 0)
-        self.source.set_freq_corr(37, 0)
+        self.source.set_freq_corr(36, 0)
         self.source.set_dc_offset_mode(0, 0)
         self.source.set_iq_balance_mode(0, 0)
         self.source.set_gain_mode(0, 0)
         self.source.set_gain(35, 0)
-        self.source.set_if_gain(20, 0)
-        self.source.set_bb_gain(20, 0)
-        self.source.set_antenna("", 0)
-        self.source.set_bandwidth(0, 0)
 
         self.channelizer = pfb.channelizer_ccf(
               chans,
               (),
-              36./25,
+              symbol_rate*samp_per_sym/channel_width,
               100)
 
         #self.channelizer.set_channel_map((range(chans/2, chans)+range(0,chans/2)))
