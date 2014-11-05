@@ -38,6 +38,7 @@
 #define BUF_SIZE 256
 
 void *tetra_tall_ctx;
+char *dumpdir;
 
 
 static int process_sym_fl(float fl)
@@ -108,6 +109,8 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Usage: %s <file_with_1_byte_per_bit>\n", argv[0]);
 		exit(1);
 	}
+
+	dumpdir=argv[2];
 
 	tetra_gsmtap_init("localhost", 0);
 
