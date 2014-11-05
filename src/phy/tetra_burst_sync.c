@@ -24,7 +24,7 @@
 
 #include <osmocom/core/utils.h>
 
-//#define DEBUG
+#define DEBUG
 
 #include <tetra_common.h>
 #include <phy/tetra_burst.h>
