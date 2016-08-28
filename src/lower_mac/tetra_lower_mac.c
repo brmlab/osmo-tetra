@@ -39,6 +39,9 @@
 #include "tetra_upper_mac.h"
 #include <lower_mac/viterbi.h>
 
+extern int ssi;
+extern int tsn;
+
 struct tetra_blk_param {
 	const char *name;
 	uint16_t type345_bits;
@@ -183,6 +186,57 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 
 	DEBUGP("%s %s type4: %s\n", tbp->name, time_str,
 		osmo_ubit_dump(type4, tbp->type345_bits));
+
+
+/*  ###### Begin traffic dump patch ###### */
+
+	extern char *dumpdir;
+	if ((type == TPSAP_T_SCH_F) && (tms->cur_burst.is_traffic) && dumpdir) {
+		printf("SAVING FRAME\n");
+		char fname[200];
+		int16_t block[690];
+		FILE *f;
+		int i;
+
+		/* Open target file */
+		//snprintf(fname, 100, "traffic_%d_%d.out", tcd->time.tn, tms->cur_burst.is_traffic);
+		//snprintf(fname, 100, "traffic_%d.out", tcd->time.tn);
+		snprintf(fname, 199, "%s/traffic_%d_%d.out", dumpdir, tms->cur_burst.is_traffic, tsn);
+		f = fopen(fname, "ab");
+
+		/* Generate a block */
+		memset(block, 0x00, sizeof(int16_t) * 690);
+		for (i=0; i<6; i++)
+		block[115*i] = 0x6b21 + i;
+
+		for (i=0; i<114; i++)
+		block[ 1+i] = type4[ i] ? -127 : 127;
+
+		for (i=0; i<114; i++)
+		block[116+i] = type4[114+i] ? -127 : 127;
+
+		for (i=0; i<114; i++)
+		block[231+i] = type4[228+i] ? -127 : 127;
+
+		for (i=0; i<90; i++)
+		block[346+i] = type4[342+i] ? -127 : 127;
+
+		/* Write it */
+		fwrite(block, sizeof(int16_t), 690, f);
+
+		/* Close */
+		fclose(f);
+		memset(fname, 0x0, sizeof(char)*200);
+		snprintf(fname, 199, "%s/traffic_%d_%d.txt", dumpdir, tms->cur_burst.is_traffic, tsn);
+		/* Write used ssi */
+		f=fopen(fname, "a");
+		memset(fname, 0x0, sizeof(char)*200);
+		snprintf(fname, 199, "%d\n", ssi);
+		fwrite(fname, sizeof(char), strlen(fname), f);
+		fclose(f);
+	}
+
+	/* end traffic dump patch */
 
 	if (tbp->interleave_a) {
 		/* Run block deinterleaving: type-3 bits */

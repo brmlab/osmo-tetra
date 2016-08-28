@@ -35,31 +35,69 @@
 #include "tetra_gsmtap.h"
 
 void *tetra_tall_ctx;
+char *dumpdir;
+
+char *pcap_file_path;
+int arfcn;
+int ssi;
+int tsn;
 
 int main(int argc, char **argv)
 {
 	int fd;
+	int opt;
+
 	struct tetra_rx_state *trs;
 	struct tetra_mac_state *tms;
 
-	if (argc < 2) {
+	char no_udp_tap = 0;
+
+	while ((opt = getopt(argc, argv, "a:t:d:n")) != -1) {
+		switch (opt) {
+		case 'a':
+			arfcn = atoi(optarg);
+			break;
+		case 't':
+			//pcap_file_path = malloc(strlen(optarg));
+			//memcpy(pcap_file_path, optarg, strlen(optarg));
+			pcap_file_path = optarg;
+			break;
+		case 'd':
+			dumpdir = optarg;
+			break;
+		case 'n':
+			fprintf(stderr, "-n does not work\n");
+			exit(1);
+			no_udp_tap = 1;
+			break;
+		default:
+			fprintf(stderr, "Unknown option %c\n", opt);
+			exit(2);
+		}
+	}
+
+	if (argc <= optind) {
+		fprintf(stderr, "Usage: %s [-a ARFCN] [-t GSMTAP_PATH] [-d DUMPDIR] [-n] -s [-v] <filestream>\n", argv[0]);
+		fprintf(stderr, "Usage: -n .. no UDP GSMTAP messages\n");
 		fprintf(stderr, "Usage: %s <file_with_1_byte_per_bit>\n", argv[0]);
 		exit(1);
 	}
 
-	fd = open(argv[1], O_RDONLY);
-	if (fd < 0) {
-		perror("open");
-		exit(2);
+	if (no_udp_tap == 0) {
+		tetra_gsmtap_init("localhost", 0);
 	}
-
-	tetra_gsmtap_init("localhost", 0);
 
 	tms = talloc_zero(tetra_tall_ctx, struct tetra_mac_state);
 	tetra_mac_state_init(tms);
 
 	trs = talloc_zero(tetra_tall_ctx, struct tetra_rx_state);
 	trs->burst_cb_priv = tms;
+
+	fd = open(argv[optind], O_RDONLY);
+	if (fd < 0) {
+		perror("open");
+		exit(2);
+	}
 
 	while (1) {
 		uint8_t buf[64];

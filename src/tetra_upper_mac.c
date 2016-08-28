@@ -38,6 +38,8 @@
 #include "tetra_mle_pdu.h"
 #include "tetra_gsmtap.h"
 
+extern int ssi;
+
 static int rx_tm_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len);
 
 static void rx_bcast(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
@@ -181,6 +183,8 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 		rx_tm_sdu(tms, msg, len_bits);
 	}
 
+  ssi = rsd.addr.ssi;
+
 out:
 	printf("\n");
 }
@@ -240,11 +244,12 @@ static void rx_aach(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
 		printf("UL_USAGE: %s ", tetra_get_ul_usage_name(aad.ul_usage));
 
 	/* save the state whether the current burst is traffic or not */
-	if (aad.dl_usage > 3)
+	if (aad.dl_usage > 3) {
 		tms->cur_burst.is_traffic = 1;
-	else
+		tms->cur_burst.is_traffic = aad.dl_usage;
+	} else {
 		tms->cur_burst.is_traffic = 0;
-
+	}
 	printf("\n");
 }
 
