@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
+#include <time.h>
 
 #include <osmocom/core/msgb.h>
 #include <osmocom/core/gsmtap.h>
@@ -14,7 +15,13 @@
 #include "tetra_common.h"
 #include "tetra_tdma.h"
 
+#include "pcap.h"
+
 static struct gsmtap_inst *g_gti = NULL;
+FILE *pcap_file;
+extern char *pcap_file_path;
+extern int arfcn;
+extern int tsn;
 
 static const uint8_t lchan2gsmtap[] = {
 	[TETRA_LC_SCH_F]	= GSMTAP_TETRA_SCH_F,
@@ -26,7 +33,6 @@ static const uint8_t lchan2gsmtap[] = {
 	[TETRA_LC_BSCH]		= GSMTAP_TETRA_BSCH,
 	[TETRA_LC_BNCH]		= GSMTAP_TETRA_BNCH,
 };
-
 
 struct msgb *tetra_gsmtap_makemsg(struct tetra_tdma_time *tm, enum tetra_log_chan lchan,
 				  uint8_t ts, uint8_t ss, int8_t signal_dbm,
@@ -47,8 +53,10 @@ struct msgb *tetra_gsmtap_makemsg(struct tetra_tdma_time *tm, enum tetra_log_cha
 	gh->hdr_len = sizeof(*gh)/4;
 	gh->type = GSMTAP_TYPE_TETRA_I1;
 	gh->timeslot = ts;
+  tsn = ts;
 	gh->sub_slot = ss;
 	gh->snr_db = snr;
+	gh->arfcn = htons(arfcn);
 	gh->signal_dbm = signal_dbm;
 	gh->frame_number = htonl(fn);
 	gh->sub_type = lchan2gsmtap[lchan];
@@ -61,8 +69,31 @@ struct msgb *tetra_gsmtap_makemsg(struct tetra_tdma_time *tm, enum tetra_log_cha
 	return msg;
 }
 
+void pcap_pipe(char * buf, size_t n)
+{
+	if (pcap_file) {
+		fwrite(buf, n, 1, pcap_file);
+		fflush(pcap_file);
+	}
+}
+
 int tetra_gsmtap_sendmsg(struct msgb *msg)
 {
+	pcaprec_hdr_t hdr;
+	bzero(&hdr, sizeof(hdr));
+
+	struct timespec now;
+	clock_gettime(CLOCK_REALTIME, &now);
+
+	hdr.ts_sec = now.tv_sec;
+	hdr.ts_usec = now.tv_nsec/1000;
+	hdr.incl_len = msg->len + sizeof(fake_frame_header);
+	hdr.orig_len = hdr.incl_len;
+
+	pcap_pipe((char*)&hdr, sizeof(pcaprec_hdr_t));
+	pcap_pipe((char*)&fake_frame_header, sizeof(fake_frame_header));
+	pcap_pipe((char*)msg->data, msg->len);
+
 	if (g_gti)
 		return gsmtap_sendmsg(g_gti, msg);
 	else
@@ -75,6 +106,21 @@ int tetra_gsmtap_init(const char *host, uint16_t port)
 	if (!g_gti)
 		return -EINVAL;
 	gsmtap_source_add_sink(g_gti);
+
+	if (pcap_file_path) {
+		pcap_hdr_t hdr;
+
+		bzero(&hdr, sizeof(hdr));
+
+		hdr.magic_number = PCAP_MAGIC;
+		hdr.version_major = PCAP_MAJOR;
+		hdr.version_minor = PCAP_MINOR;
+		hdr.snaplen = PCAP_SNAPLEN;
+		hdr.network = PCAP_ETHERNET;
+
+		pcap_file = fopen(pcap_file_path, "wb");
+		//pcap_pipe((char*)&hdr, sizeof(pcap_hdr_t));
+	}
 
 	return 0;
 }
